@@ -16,6 +16,11 @@
         Log Out
     </button>
 </a>
+ <a href="{% url 'user-profile' %}">
+    <button class="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded transition duration-200">
+        Profile
+    </button>
+</a>
         {% if is_admin %}
             <a href="{% url 'see-and-change-roles' %}" 
                class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow">Admin Panel</a>

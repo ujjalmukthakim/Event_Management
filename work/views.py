@@ -10,9 +10,14 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth import logout
-
+from django.views import View
+from django.contrib.auth.mixins import PermissionRequiredMixin,LoginRequiredMixin
+from django.views.generic import ListView,DeleteView,TemplateView
+from django.urls import reverse_lazy
 # Create your views here.
 
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 def is_admin(user):
     return user.is_superuser or user.groups.filter(name='Admin').exists()
@@ -23,14 +28,30 @@ def is_organizer(user):
     return user.groups.filter(name='Organizer').exists()
 
 
-@user_passes_test(is_admin, login_url='no-permission')
-def home(request):
-    all_category = Category.objects.annotate(
+# @user_passes_test(is_admin, login_url='no-permission')
+# def home(request):
+#     all_category = Category.objects.annotate(
+#         total_event=Count('reverse_category', distinct=True),
+#         total_participant=Count('reverse_category__participant', distinct=True) 
+#     )
+
+#     return render(request,'home.html',{'all_category':all_category})
+
+class HomeView(LoginRequiredMixin,PermissionRequiredMixin,TemplateView):
+    template_name='home.html'
+    permission_required = 'auth.view_group'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["all_category"] = Category.objects.annotate(
         total_event=Count('reverse_category', distinct=True),
         total_participant=Count('reverse_category__participant', distinct=True) 
-    )
+        )
+        return context
+    
+    
 
-    return render(request,'home.html',{'all_category':all_category})
+
 
 @user_passes_test(is_organizer, login_url='no-permission')
 def create_event(request):
@@ -95,11 +116,20 @@ def edit_event(request, id):
     return render(request, 'all.html', {'form': form})
 
 
-@user_passes_test(is_organizer, login_url='no-permission')
-def delete_event(request, id):
-    event = Event.objects.get(id=id)
-    event.delete()
-    return redirect('all_events')
+# @user_passes_test(is_organizer, login_url='no-permission')
+# def delete_event(request, id):
+#     event = Event.objects.get(id=id)
+#     event.delete()
+#     return redirect('all_events')
+
+class DeleteEvent(LoginRequiredMixin,PermissionRequiredMixin,DeleteView):
+    model=Event
+    permission_required = 'work.delete_event'
+    login_url='no-permission'
+    success_url=reverse_lazy('all_events')
+
+
+
 
 @user_passes_test(is_admin, login_url='no-permission')
 def see_and_change_roles(request):
@@ -130,10 +160,24 @@ def see_and_change_roles(request):
 #     all_group=Group.objects.all()
 #     return render(request,'group.html',{'all_group':all_group})
 
-@user_passes_test(is_admin, login_url='no-permission')
-def show_group(request):
-    all_group=Group.objects.all()
-    return render(request,'group.html',{'all_group':all_group})
+# @user_passes_test(is_admin, login_url='no-permission')
+# def show_group(request):
+#     all_group=Group.objects.all()
+#     return render(request,'group.html',{'all_group':all_group})
+
+class ShowGroup(LoginRequiredMixin,PermissionRequiredMixin,ListView,View):
+    model=Group
+    template_name = 'group.html'
+    context_object_name = 'all_group'
+    login_url = 'no-permission'
+    
+    permission_required = 'auth.view_group'
+
+
+
+
+
+
 
 
 @user_passes_test(is_admin, login_url='no-permission')
@@ -215,36 +259,61 @@ def rsvp_event(request, event_id):
 
     return redirect('dashboard')
 
-@login_required
-def dashboard(request):
-    events = Event.objects.all()
+# @login_required
+# def dashboard(request):
+#     events = Event.objects.all()
     
    
-    is_organizer = request.user.groups.filter(name='Organizer').exists()
-    is_admin = request.user.is_superuser
+#     is_organizer = request.user.groups.filter(name='Organizer').exists()
+#     is_admin = request.user.is_superuser
     
   
-    booked_event_ids = request.user.rsvp_events.values_list('id', flat=True)
+#     booked_event_ids = request.user.rsvp_events.values_list('id', flat=True)
     
-    return render(request, 'dashboard.html', {
-        'events': events,
-        'is_organizer': is_organizer,
-        'is_admin': is_admin,
-        'booked_event_ids': booked_event_ids
-    })
+#     return render(request, 'dashboard.html', {
+#         'events': events,
+#         'is_organizer': is_organizer,
+#         'is_admin': is_admin,
+#         'booked_event_ids': booked_event_ids
+#     })
 
-@user_passes_test(is_admin, login_url='no-permission')
-def delete_participant(request, user_id):
-    participant = get_object_or_404(User, id=user_id)
 
-    if request.method == 'POST':
-        participant.delete()
-        messages.success(request, f'Participant "{participant.username}" has been deleted.')
-        return redirect('see-and-change-roles')
+class DashboardView(LoginRequiredMixin, ListView):
+    model=Event
+    template_name = 'dashboard.html'
+    context_object_name = 'events'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["is_organizer"] = self.request.user.groups.filter(name='Organizer').exists()
+        context['is_admin'] = self.request.user.is_superuser
+        context['booked_event_ids'] = self.request.user.rsvp_events.values_list('id', flat=True)
+        return context
+    
 
-    return render(request, 'delete_participant.html', {'participant': participant})
+
+
+# @user_passes_test(is_admin, login_url='no-permission')
+# def delete_participant(request, user_id):
+#     participant = get_object_or_404(User, id=user_id)
+
+#     if request.method == 'POST':
+#         participant.delete()
+#         messages.success(request, f'Participant "{participant.username}" has been deleted.')
+#         return redirect('see-and-change-roles')
+
+#     return render(request, 'delete_participant.html', {'participant': participant})
+
+class DeleteParticipent(LoginRequiredMixin,PermissionRequiredMixin,DeleteView):
+    model=User
+    permission_required = 'auth.delete_task'
+    template_name='delete_participant.html'
+    success_url = reverse_lazy('see-and-change-roles')
+
 
 @login_required
 def sign_out(request):
     logout(request)
     return redirect('sign-in')
+
+

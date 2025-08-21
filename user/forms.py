@@ -1,10 +1,11 @@
 from django import forms
 import re
 from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth.models import User
+from .models import CustomUser
 from work.forms import StyledFormMixin
 from django.contrib.auth.forms import AuthenticationForm
-
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 class RegisterForm(UserCreationForm):
     class Meta:
@@ -97,3 +98,18 @@ class LoginForm(StyledFormMixin, AuthenticationForm):
 #     class Meta:
 #         model = Group
 #         fields = ['name', 'permissions']
+
+
+class EditProfileForm(StyledFormMixin, forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'profile_picture', 'phone']
+        widgets = {
+            'email': forms.EmailInput() 
+        }
+
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone')
+        if phone and not re.match(r'^\+?\d{10,15}$', phone):
+            raise forms.ValidationError("Enter a valid phone number")
+        return phone

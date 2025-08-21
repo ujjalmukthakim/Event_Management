@@ -4,6 +4,13 @@ from django.contrib.auth import login
 from user.forms import CustomRegistrationForm, LoginForm
 from django.contrib import messages
 from django.contrib.auth.tokens import default_token_generator
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
+from .forms import EditProfileForm
+from .models import CustomUser
 
 
 
@@ -58,3 +65,62 @@ def activate_user(request, user_id, token):
         return redirect('sign-up')
     
 
+
+
+
+@login_required
+def user_profile(request):
+    """
+    Display the user's profile
+    """
+    user = request.user
+   
+    rsvp_events = user.rsvp_events.all() if hasattr(user, 'rsvp_events') else []
+    
+    context = {
+        'user': user,
+        'rsvp_events': rsvp_events,
+    }
+    return render(request, 'userprofile.html', context)
+
+
+
+@login_required
+def edit_profile(request):
+    """
+    Edit user's profile (optional fields like phone, profile_picture)
+    """
+    user = request.user
+    if request.method == "POST":
+        form = EditProfileForm(request.POST, request.FILES, instance=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Profile updated successfully")
+            return redirect('user-profile')
+        else:
+            messages.error(request, "Please correct the errors below")
+    else:
+        form = EditProfileForm(instance=user)
+
+    return render(request, 'edit_profile.html', {'form': form})
+
+
+
+@login_required
+def change_password(request):
+    """
+    Change user password
+    """
+    if request.method == "POST":
+        form = PasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)  
+            messages.success(request, "Password changed successfully")
+            return redirect('user-profile')
+        else:
+            messages.error(request, "Please correct the errors below")
+    else:
+        form = PasswordChangeForm(user=request.user)
+
+    return render(request, 'change_password.html', {'form': form})

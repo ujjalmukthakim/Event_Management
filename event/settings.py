@@ -130,7 +130,10 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 
 
 # Your frontend base URL for activation links etc.
+# FRONTEND_URL = 'https://assignment2-z7dp.onrender.com'
 FRONTEND_URL = 'https://assignment2-z7dp.onrender.com'
+
+AUTH_USER_MODEL = 'user.CustomUser'
 
 # Login redirect URL
 LOGIN_URL = 'sign-in'

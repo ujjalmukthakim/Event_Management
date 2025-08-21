@@ -1,7 +1,8 @@
 from django import forms
 from django.contrib.auth.models import User, Group,Permission
 from .models import Category,Event
-
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 class StyledFormMixin:
     """ Mixing to apply style to form field"""
@@ -42,9 +43,14 @@ class StyledFormMixin:
                 })
 
 
+
 class AssignRoleForm(forms.Form):
-    user = forms.ModelChoiceField(queryset=User.objects.all())
+    user = forms.ModelChoiceField(queryset=User.objects.none())
     role = forms.ModelChoiceField(queryset=Group.objects.all())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['user'].queryset = User.objects.all()
 
 class EventForm(forms.ModelForm):
     class Meta:

@@ -5,6 +5,8 @@ from django.contrib.auth.tokens import default_token_generator
 from django.conf import settings
 from django.core.mail import send_mail
 from django.urls import reverse
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 
 @receiver(post_save, sender=User)
