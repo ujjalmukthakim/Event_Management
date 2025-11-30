@@ -174,7 +174,7 @@ class ShowGroup(LoginRequiredMixin,PermissionRequiredMixin,ListView,View):
     permission_required = 'auth.view_group'
 
 
-
+# ok
 
 
 
